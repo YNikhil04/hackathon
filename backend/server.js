@@ -1,371 +1,207 @@
 const express = require("express");
-
 const cors = require("cors");
-
-const app = express();
-
 require("dotenv").config();
-
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-app.use(cors());
+const app = express();
+const PORT = 5000;
 
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// ─── Question Bank ───────────────────────────────────────────────────────────
+// Initialize Gemini AI
 
-const questionBank = {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// --- MOCK DATABASE (Questions) ---
+// --- MOCK DATABASE (Expanded Questions) ---
+const questionsData = {
   jee: [
     {
-      id: 1,
-
-      question:
-        "A particle moves in a circle of radius 5 cm with constant speed 10 cm/s. What is the acceleration of the particle?",
-
-      options: ["10 cm/s²", "20 cm/s²", "25 cm/s²", "5 cm/s²"],
-
-      answer: 1,
-
+      id: 101,
       subject: "Physics",
+      question: "Dimensional formula of Gravitational Constant (G)?",
+      options: ["[M-1 L3 T-2]", "[M1 L2 T-2]", "[M-1 L2 T-1]", "[M1 L3 T-2]"],
+      correctAnswer: 0,
     },
-
     {
-      id: 2,
-
-      question: "The number of orbitals in the 4th shell is:",
-
-      options: ["8", "16", "4", "32"],
-
-      answer: 1,
-
-      subject: "Chemistry",
-    },
-
-    {
-      id: 3,
-
-      question: "If f(x) = x² - 3x + 2, find f(0) + f(1):",
-
-      options: ["3", "2", "0", "1"],
-
-      answer: 0,
-
+      id: 102,
       subject: "Maths",
+      question: "The value of ∫ sin²x dx is:",
+      options: [
+        "x/2 - sin2x/4 + C",
+        "x/2 + sin2x/4 + C",
+        "cos²x + C",
+        "sin³x/3 + C",
+      ],
+      correctAnswer: 0,
     },
-
     {
-      id: 4,
-
-      question: "Which of the following is NOT a state function?",
-
-      options: ["Enthalpy", "Entropy", "Work", "Internal Energy"],
-
-      answer: 2,
-
+      id: 103,
       subject: "Chemistry",
+      question: "Highest electron affinity element?",
+      options: ["Fluorine", "Chlorine", "Oxygen", "Nitrogen"],
+      correctAnswer: 1,
     },
-
     {
-      id: 5,
-
-      question:
-        "The de Broglie wavelength of an electron moving with velocity v is:",
-
-      options: ["h/mv", "mv/h", "h*mv", "m/hv"],
-
-      answer: 0,
-
+      id: 104,
       subject: "Physics",
+      question: "Working principle of Optical Fiber?",
+      options: [
+        "Refraction",
+        "Scattering",
+        "Total Internal Reflection",
+        "Dispersion",
+      ],
+      correctAnswer: 2,
+    },
+    {
+      id: 105,
+      subject: "Maths",
+      question: "Derivative of e^(sin x) is:",
+      options: [
+        "e^(sin x)",
+        "cos x * e^(sin x)",
+        "sin x * e^(cos x)",
+        "e^(cos x)",
+      ],
+      correctAnswer: 1,
+    },
+    {
+      id: 106,
+      subject: "Chemistry",
+      question: "Which gas is known as Laughing Gas?",
+      options: ["NO", "NO2", "N2O", "N2O5"],
+      correctAnswer: 2,
     },
   ],
-
   gate: [
     {
-      id: 1,
-
-      question: "What is the time complexity of binary search?",
-
-      options: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-
-      answer: 1,
-
-      subject: "Algorithms",
+      id: 201,
+      subject: "CS",
+      question: "Which data structure is used for BFS?",
+      options: ["Stack", "Queue", "Tree", "Graph"],
+      correctAnswer: 1,
     },
-
     {
-      id: 2,
-
-      question:
-        "Which of the following is NOT a type of process scheduling algorithm?",
-
-      options: ["FCFS", "Round Robin", "Binary Sort", "Priority Scheduling"],
-
-      answer: 2,
-
-      subject: "OS",
+      id: 202,
+      subject: "CS",
+      question: "Time complexity of Binary Search?",
+      options: ["O(n)", "O(n log n)", "O(log n)", "O(1)"],
+      correctAnswer: 2,
     },
-
     {
-      id: 3,
-
-      question:
-        "In a full binary tree with n leaves, the number of internal nodes is:",
-
-      options: ["n", "n-1", "n+1", "2n"],
-
-      answer: 1,
-
-      subject: "Data Structures",
+      id: 203,
+      subject: "CS",
+      question: "Which layer handles IP addressing?",
+      options: ["Data Link", "Network", "Transport", "Physical"],
+      correctAnswer: 1,
     },
-
     {
-      id: 4,
-
-      question: "Which normal form deals with multi-valued dependencies?",
-
-      options: ["1NF", "2NF", "3NF", "4NF"],
-
-      answer: 3,
-
-      subject: "DBMS",
+      id: 204,
+      subject: "CS",
+      question: "Smallest unit of data in a database?",
+      options: ["Record", "Table", "Field", "File"],
+      correctAnswer: 2,
     },
-
     {
-      id: 5,
-
-      question: "What does the OSI model stand for?",
-
-      options: [
-        "Open Systems Interconnection",
-
-        "Open Source Interface",
-
-        "Operating System Integration",
-
-        "None of these",
-      ],
-
-      answer: 0,
-
-      subject: "Networks",
+      id: 205,
+      subject: "CS",
+      question: "Process of finding errors in code?",
+      options: ["Compiling", "Executing", "Debugging", "Linking"],
+      correctAnswer: 2,
+    },
+    {
+      id: 206,
+      subject: "CS",
+      question: "HTTP port number?",
+      options: ["21", "25", "80", "443"],
+      correctAnswer: 2,
     },
   ],
 };
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+// --- ENDPOINTS ---
 
-// GET /api/exam-types  → return available exam types
-
-app.get("/exam-types", (req, res) => {
-  res.json({
-    success: true,
-
-    exams: [
-      { id: "jee", label: "JEE", description: "Joint Entrance Examination" },
-
-      {
-        id: "gate",
-
-        label: "GATE",
-
-        description: "Graduate Aptitude Test in Engineering",
-      },
-    ],
-  });
-});
-
-// POST /api/start-test  → activate test session based on exam type
-
+// 1. Fetch Questions Based on Exam Type
 app.post("/api/start-test", (req, res) => {
   const { examType } = req.body;
+  const questions = questionsData[examType.toLowerCase()] || [];
 
-  if (!examType) {
+  if (questions.length === 0) {
     return res
-
-      .status(400)
-
-      .json({ success: false, message: "examType is required" });
-  }
-
-  const type = examType.toLowerCase();
-
-  if (!questionBank[type]) {
-    return res
-
       .status(404)
-
-      .json({ success: false, message: `Exam type "${examType}" not found` });
+      .json({ success: false, message: "Exam type not found" });
   }
 
-  // Shuffle & pick questions (pick all 5 here, you can slice as needed)
-
-  const questions = questionBank[type]
-
-    .sort(() => Math.random() - 0.5)
-
-    .map(({ answer, ...q }) => q); // strip correct answer before sending to frontend
-
-  // Generate a simple session token
-
-  const sessionId = `${type}-${Date.now()}`;
-
-  res.json({
-    success: true,
-
-    sessionId,
-
-    examType: type.toUpperCase(),
-
-    totalQuestions: questions.length,
-
-    durationMinutes: type === "jee" ? 30 : 45,
-
-    questions,
-  });
+  res.json({ success: true, questions });
 });
 
-// POST /api/submit-test  → evaluate answers and return score
-
+// 2. Validate Answers
 app.post("/api/submit-test", (req, res) => {
-  const { examType, answers } = req.body;
+  const { examType, answers } = req.body; // answers: [{questionId, selectedOption}]
+  const bank = questionsData[examType.toLowerCase()];
 
-  // answers = [{ questionId, selectedOption }]
-
-  if (!examType || !answers) {
-    return res
-
-      .status(400)
-
-      .json({ success: false, message: "examType and answers are required" });
-  }
-
-  const type = examType.toLowerCase();
-
-  const bank = questionBank[type];
-
-  if (!bank) {
-    return res
-
-      .status(404)
-
-      .json({ success: false, message: "Invalid exam type" });
-  }
-
-  let score = 0;
-
-  const result = answers.map(({ questionId, selectedOption }) => {
-    const question = bank.find((q) => q.id === questionId);
-
-    if (!question) return { questionId, correct: false };
-
-    const isCorrect = question.answer === selectedOption;
-
-    if (isCorrect) score++;
-
+  const results = answers.map((userAns) => {
+    const originalQ = bank.find((q) => q.id === userAns.questionId);
     return {
-      questionId,
-
-      correct: isCorrect,
-
-      correctAnswer: question.answer,
-
-      yourAnswer: selectedOption,
+      questionId: userAns.questionId,
+      correct: originalQ.correctAnswer === userAns.selectedOption,
+      correctAnswer: originalQ.correctAnswer,
     };
   });
 
-  res.json({
-    success: true,
-
-    score,
-
-    total: bank.length,
-
-    percentage: ((score / bank.length) * 100).toFixed(1),
-
-    result,
-  });
+  res.json({ success: true, result: results });
 });
 
-// Initialize Google AI (Ensure GEMINI_API_KEY is in your .env file)
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Master Prompt Logic for the AI
-
-const SYSTEM_PROMPT = `
-
-You are an expert Learning Scientist. Create a 'Friction-Based' study schedule.
-
-Rules:
-
-1. High Difficulty + Low Focus = 15-min 'micro-wins'.
-
-2. Easy Difficulty + High Focus = Suggest swapping for a harder task.
-
-3. Brain Breaks (5-10 mins) every 50 mins.
-
-4. Output: Markdown Table + 'Cognitive Insight' explanation.
-
-`;
-
-// GET and POST routes for JEE/GATE (keep your prior code here)
-
-// --- MODIFIED OPTIMIZE ROUTE ---
-
-// --- MODIFIED OPTIMIZE ROUTE ---
+// 3. AI Schedule Generator (Gemini Integration)
+// Inside your server.js
+// Inside your /api/optimize route in server.js
+// ... (Keep your Express setup and questionsData the same)
 
 app.post("/api/optimize", async (req, res) => {
-  const { energy, hours, subjects, isSevenDay } = req.body;
-
-  if (!subjects || subjects.length === 0) {
-    return res.status(400).json({
-      success: false,
-
-      error: "Subjects are required.",
-    });
-  }
+  const { subjects, energy, hours } = req.body;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash", // Use the official stable model name
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+      ],
+    });
 
-    const subjectList = subjects
-
-      .map((s) => `${s.name} (${s.difficulty})`)
-
-      .join(", ");
-
-    const userPrompt = `
-
-      Energy: ${energy}, Hours: ${hours}, Focus: ${subjectList}.
-
-      Generate a ${isSevenDay ? "7-Day" : "1-Day"} study roadmap in a Markdown table.
-
+    const prompt = `
+      Create a 7-day study plan for a student struggling with: ${subjects.join(", ")}.
+      Daily hours available: ${hours}. Energy level: ${energy}.
+      
+      Format your response exactly as a Markdown table.
+      The table must have these 4 columns: | Day | Topic | Activity | Goal |
+      Ensure there is a separator line under the header. Do not write anything before or after the table.
     `;
 
-    // FIX: Pass the system prompt and user prompt correctly as a combined string or array
-
-    const result = await model.generateContent(
-      `${SYSTEM_PROMPT}\n\n${userPrompt}`,
-    );
-
+    const result = await model.generateContent(prompt);
     const response = await result.response;
-
     const text = response.text();
+
+    if (!text || text.length < 10) {
+      throw new Error("AI returned an empty or invalid response");
+    }
 
     res.json({ success: true, text: text });
   } catch (error) {
-    console.error("Gemini AI Error:", error);
-
+    console.error("Backend Error:", error);
     res.status(500).json({
       success: false,
-
-      error: "AI failed. Ensure your GEMINI_API_KEY is valid in the .env file.",
+      error: "AI Generation Failed",
+      message: error.message,
     });
   }
 });
 
-const PORT = process.env.PORT || 3000;
+app.listen(5000, () => console.log("🚀 Server running on port 5000"));
 
 app.listen(PORT, () => {
-  console.log(`✅ Exam Quiz Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Backend Server running on http://localhost:${PORT}`);
 });
